@@ -11,7 +11,7 @@ from . import json
 from .exceptions import NetsuiteAPIRequestError, NetsuiteAPIResponseParsingError
 from .util import cached_property
 
-__all__ = ("RestApiBase",)
+__all__ = ("AsyncRestApiBase",)
 
 DEFAULT_SIGNATURE_METHOD = "HMAC-SHA256"
 
@@ -32,14 +32,14 @@ class RestApiBase:
     _default_timeout: int = 10
     _signature_method: str = DEFAULT_SIGNATURE_METHOD
 
-    # @cached_property
-    # def _request_semaphore(self) -> asyncio.Semaphore:
-    #     # NOTE: Shouldn't be put in __init__ as we might not have a running
-    #     #       event loop at that time.
-    #     return asyncio.Semaphore(self._concurrent_requests)
+    @cached_property
+    def _request_semaphore(self) -> asyncio.Semaphore:
+        # NOTE: Shouldn't be put in __init__ as we might not have a running
+        #       event loop at that time.
+        return asyncio.Semaphore(self._concurrent_requests)
 
-    def _request(self, method: str, subpath: str, **request_kw):
-        resp = self._request_impl(method, subpath, **request_kw)
+    async def _request(self, method: str, subpath: str, **request_kw):
+        resp = await self._request_impl(method, subpath, **request_kw)
 
         if resp.status_code < 200 or resp.status_code > 299:
             raise NetsuiteAPIRequestError(resp.status_code, resp.text)
@@ -52,7 +52,7 @@ class RestApiBase:
             except Exception:
                 raise NetsuiteAPIResponseParsingError(resp.status_code, resp.text)
 
-    def _request_impl(
+    async def _request_impl(
         self, method: str, subpath: str, **request_kw
     ) -> httpx.Response:
         method = method.upper()
@@ -70,16 +70,16 @@ class RestApiBase:
             f"Making {method.upper()} request to {url}. Keyword arguments: {kw}"
         )
 
-        #with self._request_semaphore:
-        with httpx.Client() as c:
-            resp = c.request(
-                method=method,
-                url=url,
-                headers=headers,
-                auth=self._make_auth(),
-                timeout=timeout,
-                **kw,
-            )
+        async with self._request_semaphore:
+            async with httpx.AsyncClient() as c:
+                resp = await c.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    auth=self._make_auth(),
+                    timeout=timeout,
+                    **kw,
+                )
 
         resp_headers_json = json.dumps(dict(resp.headers))
         logger.debug(f"Got response headers from NetSuite: {resp_headers_json}")

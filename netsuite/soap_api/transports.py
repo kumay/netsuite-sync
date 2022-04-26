@@ -2,13 +2,10 @@ import urllib.parse
 
 from . import zeep
 
-__all__ = ("AsyncNetSuiteTransport",)
+__all__ = ("NetSuiteTransport")
 
 
-# TODO: ASYNC! Maybe remove this custom transport?!?!
-
-
-class AsyncNetSuiteTransport(zeep.transports.AsyncTransport):
+class NetSuiteTransport(zeep.transports.Transport):
     """
     NetSuite company-specific domain wrapper for zeep.transports.transport
 
@@ -31,8 +28,8 @@ class AsyncNetSuiteTransport(zeep.transports.AsyncTransport):
         path = address[idx:]
         return f"{self._netsuite_base_url}{path}"
 
-    async def get(self, address, params, headers):
-        return await super().get(self._fix_address(address), params, headers)
+    def get(self, address, params, headers):
+        return super().get(self._fix_address(address), params, headers)
 
-    async def post(self, address, message, headers):
-        return await super().post(self._fix_address(address), message, headers)
+    def post(self, address, message, headers):
+        return super().post(self._fix_address(address), message, headers)

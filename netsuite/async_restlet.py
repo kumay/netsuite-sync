@@ -6,7 +6,7 @@ from .util import cached_property
 
 logger = logging.getLogger(__name__)
 
-__all__ = ("NetSuiteRestlet",)
+__all__ = ("AsyncNetSuiteRestlet",)
 
 
 class NetSuiteRestlet(rest_api_base.RestApiBase):
@@ -27,21 +27,21 @@ class NetSuiteRestlet(rest_api_base.RestApiBase):
     def hostname(self) -> str:
         return self._make_hostname()
 
-    def get(self, script_id: int, *, deploy: int = 1, **request_kw):
+    async def get(self, script_id: int, *, deploy: int = 1, **request_kw):
         subpath = self._make_restlet_params(script_id, deploy)
-        return self._request("GET", subpath, **request_kw)
+        return await self._request("GET", subpath, **request_kw)
 
-    def post(self, script_id: int, *, deploy: int = 1, **request_kw):
+    async def post(self, script_id: int, *, deploy: int = 1, **request_kw):
         subpath = self._make_restlet_params(script_id, deploy)
-        return self._request("POST", subpath, **request_kw)
+        return await self._request("POST", subpath, **request_kw)
 
-    def put(self, script_id: int, *, deploy: int = 1, **request_kw):
+    async def put(self, script_id: int, *, deploy: int = 1, **request_kw):
         subpath = self._make_restlet_params(script_id, deploy)
-        return self._request("PUT", subpath, **request_kw)
+        return await self._request("PUT", subpath, **request_kw)
 
-    def delete(self, script_id: int, *, deploy: int = 1, **request_kw):
+    async def delete(self, script_id: int, *, deploy: int = 1, **request_kw):
         subpath = self._make_restlet_params(script_id, deploy)
-        return self._request("DELETE", subpath, **request_kw)
+        return await self._request("DELETE", subpath, **request_kw)
 
     def _make_restlet_params(self, script_id: int, deploy: int = 1) -> str:
         return f"?script={script_id}&deploy={deploy}"

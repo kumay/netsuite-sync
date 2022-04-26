@@ -35,7 +35,7 @@ def add_parser(parser, subparser):
 
 
 def _add_rest_api_get_parser(parser, subparser):
-    def rest_api_get(config, args) -> str:
+    async def rest_api_get(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
         params = {}
         if args.expandSubResources is True:
@@ -50,7 +50,7 @@ def _add_rest_api_get_parser(parser, subparser):
             params["expand"] = ",".join(args.expand)
         if args.query is not None:
             params["q"] = args.query
-        resp = rest_api.get(
+        resp = await rest_api.get(
             args.subpath, params=params, headers=_parse_headers_arg(parser, args.header)
         )
         return json.dumps(resp)
@@ -93,14 +93,14 @@ def _add_rest_api_get_parser(parser, subparser):
 
 
 def _add_rest_api_post_parser(parser, subparser):
-    def rest_api_post(config, args) -> str:
+    async def rest_api_post(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
         with args.payload_file as fh:
             payload_str = fh.read()
 
         payload = json.loads(payload_str)
 
-        resp = rest_api.post(
+        resp = await rest_api.post(
             args.subpath, json=payload, headers=_parse_headers_arg(parser, args.header)
         )
         return json.dumps(resp)
@@ -118,14 +118,14 @@ def _add_rest_api_post_parser(parser, subparser):
 
 
 def _add_rest_api_put_parser(parser, subparser):
-    def rest_api_put(config, args) -> str:
+    async def rest_api_put(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
         with args.payload_file as fh:
             payload_str = fh.read()
 
         payload = json.loads(payload_str)
 
-        resp = rest_api.put(
+        resp = await rest_api.put(
             args.subpath, json=payload, headers=_parse_headers_arg(parser, args.header)
         )
         return json.dumps(resp)
@@ -143,14 +143,14 @@ def _add_rest_api_put_parser(parser, subparser):
 
 
 def _add_rest_api_patch_parser(parser, subparser):
-    def rest_api_patch(config, args) -> str:
+    async def rest_api_patch(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
         with args.payload_file as fh:
             payload_str = fh.read()
 
         payload = json.loads(payload_str)
 
-        resp = rest_api.patch(
+        resp = await rest_api.patch(
             args.subpath, json=payload, headers=_parse_headers_arg(parser, args.header)
         )
         return json.dumps(resp)
@@ -168,9 +168,9 @@ def _add_rest_api_patch_parser(parser, subparser):
 
 
 def _add_rest_api_delete_parser(parser, subparser):
-    def rest_api_delete(config, args) -> str:
+    async def rest_api_delete(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
-        resp = rest_api.delete(
+        resp = await rest_api.delete(
             args.subpath, headers=_parse_headers_arg(parser, args.header)
         )
         return json.dumps(resp)
@@ -187,13 +187,13 @@ def _add_rest_api_delete_parser(parser, subparser):
 
 
 def _add_rest_api_suiteql_parser(parser, subparser):
-    def rest_api_suiteql(config, args) -> str:
+    async def rest_api_suiteql(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
 
         with args.q_file as fh:
             q = fh.read()
 
-        resp = rest_api.suiteql(
+        resp = await rest_api.suiteql(
             q=q,
             limit=args.limit,
             offset=args.offset,
@@ -215,9 +215,9 @@ def _add_rest_api_suiteql_parser(parser, subparser):
 
 
 def _add_rest_api_jsonschema_parser(parser, subparser):
-    def rest_api_jsonschema(config, args) -> str:
+    async def rest_api_jsonschema(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
-        resp = rest_api.jsonschema(args.record_type)
+        resp = await rest_api.jsonschema(args.record_type)
         return json.dumps(resp)
 
     p = subparser.add_parser(
@@ -229,9 +229,9 @@ def _add_rest_api_jsonschema_parser(parser, subparser):
 
 
 def _add_rest_api_openapi_parser(parser, subparser):
-    def rest_api_openapi(config, args) -> str:
+    async def rest_api_openapi(config, args) -> str:
         rest_api = _get_rest_api_or_error(parser, config)
-        resp = rest_api.openapi(args.record_types)
+        resp = await rest_api.openapi(args.record_types)
         return json.dumps(resp)
 
     p = subparser.add_parser(
@@ -249,7 +249,7 @@ def _add_rest_api_openapi_parser(parser, subparser):
 
 
 def _add_rest_api_openapi_serve_parser(parser, subparser):
-    def rest_api_openapi_serve(config, args):
+    async def rest_api_openapi_serve(config, args):
         rest_api = _get_rest_api_or_error(parser, config)
         if len(args.record_types) == 0:
             logger.warning(
@@ -260,7 +260,7 @@ def _add_rest_api_openapi_serve_parser(parser, subparser):
         else:
             rt_str = ", ".join(args.record_types)
             logger.info(f"Fetching OpenAPI spec for record types {rt_str}...")
-        spec = rest_api.openapi(args.record_types)
+        spec = await rest_api.openapi(args.record_types)
         tempdir = pathlib.Path(tempfile.mkdtemp())
         openapi_file = tempdir / "openapi.json"
         html_file = tempdir / "index.html"

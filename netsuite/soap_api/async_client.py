@@ -8,11 +8,11 @@ from ..config import Config
 from ..util import cached_property
 from . import helpers, passport, zeep
 from .decorators import WebServiceCall
-from .transports import NetSuiteTransport
+from .transports import AsyncNetSuiteTransport
 
 logger = logging.getLogger(__name__)
 
-__all__ = ("NetSuiteSoapApi",)
+__all__ = ("AsyncNetSuiteSoapApi",)
 
 
 # TODO: Submit PR for the following changes (1170 uses a different method)
@@ -22,20 +22,19 @@ __all__ = ("NetSuiteSoapApi",)
 #           See https://www.python-httpx.org/async/#opening-and-closing-clients
 #           for details.
 #
-class _Client(zeep.client.Client):
-    def __enter__(self):
-        # self.transport.__enter__()
+class _AsyncClient(zeep.client.AsyncClient):
+    async def __aenter__(self):
+        await self.transport.client.__aenter__()
         return self
 
-    def __exit__(self, exc_type=None, exc_value=None, traceback=None) -> None:
-        pass
-        # self.transport.__exit__(
-        #     exc_type=exc_type, exc_value=exc_value, traceback=traceback
-        # )
+    async def __aexit__(self, exc_type=None, exc_value=None, traceback=None) -> None:
+        await self.transport.client.__aexit__(
+            exc_type=exc_type, exc_value=exc_value, traceback=traceback
+        )
 
 
-class NetSuiteSoapApi:
-    version = "2021.2.0"
+class AsyncNetSuiteSoapApi:
+    version = "2021.1.0"
     wsdl_url_tmpl = "https://{account_slug}.suitetalk.api.netsuite.com/wsdl/v{underscored_version}/netsuite.wsdl"
 
     def __init__(
@@ -59,12 +58,12 @@ class NetSuiteSoapApi:
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} {self.hostname}({self.version})>"
 
-    def __enter__(self):
-        self.client.__enter__()
+    async def __aenter__(self):
+        await self.client.__aenter__()
         return self
 
-    def __exit__(self, exc_type=None, exc_value=None, traceback=None) -> None:
-        self.client.__exit__(
+    async def __aexit__(self, exc_type=None, exc_value=None, traceback=None) -> None:
+        await self.client.__aexit__(
             exc_type=exc_type, exc_value=exc_value, traceback=traceback
         )
 
@@ -81,7 +80,7 @@ class NetSuiteSoapApi:
         return self.__session or self._generate_session()
 
     @cached_property
-    def client(self) -> _Client:
+    def client(self) -> _AsyncClient:
         return self._generate_client()
 
     @cached_property
@@ -116,8 +115,8 @@ class NetSuiteSoapApi:
     def _generate_session(self) -> zeep.requests.Session:
         return zeep.requests.Session()
 
-    def _generate_transport(self) -> zeep.transports.Transport:
-        return NetSuiteTransport(
+    def _generate_transport(self) -> zeep.transports.AsyncTransport:
+        return AsyncNetSuiteTransport(
             self._generate_wsdl_url(),
             session=self.session,
             cache=self.cache,
@@ -136,8 +135,8 @@ class NetSuiteSoapApi:
         with self.transport.settings(timeout=timeout):
             yield
 
-    def _generate_client(self) -> _Client:
-        return _Client(
+    def _generate_client(self) -> _AsyncClient:
+        return _AsyncClient(
             self.wsdl_url,
             transport=self.transport,
         )
@@ -348,7 +347,7 @@ class NetSuiteSoapApi:
     def SupplyChainTypes(self) -> zeep.client.Factory:
         return self._type_factory("types.supplychain", "lists")
 
-    def request(self, service_name: str, *args, **kw):
+    async def request(self, service_name: str, *args, **kw):
         """
         Make a web service request to NetSuite
 
@@ -360,29 +359,20 @@ class NetSuiteSoapApi:
         """
         svc = getattr(self.service, service_name)
         # NOTE: Using httpx context manager here
-        # TODO: we are now using sync so this comment might not matter anymoure.
         #       This avoids the following error on asyncio close:
         #
         #           UserWarning: Unclosed <httpx.AsyncClient object at 0x10e431be0>.
         #           See https://www.python-httpx.org/async/#opening-and-closing-clients
         #           for details.
         #
-        with self:
-            # print("passwport")
-            # print(self.generate_passport())
-            # print(*args)
-            # import inspect
-            # print("svc")
-            # print(inspect.getargspec(svc))
-            # from lxml.etree import tostring
-            # print(tostring(self.client.create_message(self.client.service, 'add', *args, **kw)))
-            return svc(*args, _soapheaders=self.generate_passport(), **kw)
+        async with self:
+            return await svc(*args, _soapheaders=self.generate_passport(), **kw)
 
     @WebServiceCall(
         "body.readResponseList.readResponse",
         extract=lambda resp: [r["record"] for r in resp],
     )
-    def getList(
+    async def getList(
         self,
         recordType: str,
         *,
@@ -402,7 +392,7 @@ class NetSuiteSoapApi:
         if len(internalIds) + len(externalIds) == 0:
             return []
 
-        return self.request(
+        return await self.request(
             "getList",
             self.Messages.GetListRequest(
                 baseRef=[
@@ -426,7 +416,7 @@ class NetSuiteSoapApi:
         "body.readResponse",
         extract=lambda resp: resp["record"],
     )
-    def get(
+    async def get(
         self, recordType: str, *, internalId: int = None, externalId: str = None
     ) -> zeep.xsd.CompoundValue:
         """Get a single record"""
@@ -444,81 +434,71 @@ class NetSuiteSoapApi:
                 externalId=externalId,
             )
 
-        return self.request("get", baseRef=record_ref)
+        return await self.request("get", baseRef=record_ref)
 
     @WebServiceCall(
         "body.getAllResult",
         extract=lambda resp: resp["recordList"]["record"],
     )
-    def getAll(self, recordType: str) -> List[zeep.xsd.CompoundValue]:
+    async def getAll(self, recordType: str) -> List[zeep.xsd.CompoundValue]:
         """Get all records of a given type."""
-        return self.request(
+        return await self.request(
             "getAll",
             record=self.Core.GetAllRecord(
                 recordType=recordType,
             ),
         )
 
-    # OROGINAL add function
     @WebServiceCall(
         "body.writeResponse",
         extract=lambda resp: resp["baseRef"],
     )
-    def add(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
-        return self.request("add", record=record)
-
-    @WebServiceCall(
-        "body.writeResponse",
-        extract=lambda resp: resp["baseRef"],
-    )
-    def addSalesOrder(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
+    async def add(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
         """Insert a single record."""
-        record = self.Sales.SalesOrder(entity=record["entity"],
-                                       itemList=self.Sales.SalesOrderItemList(record["itemList"]))
-        return self.request("add", record=record)
+        return await self.request("add", record=record)
 
     @WebServiceCall(
         "body.writeResponse",
         extract=lambda resp: resp["baseRef"],
     )
-    def update(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
+    async def update(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
         """Insert a single record."""
-        return self.request("update", record=record)
+        return await self.request("update", record=record)
 
     @WebServiceCall(
         "body.writeResponse",
         extract=lambda resp: resp["baseRef"],
     )
-    def upsert(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
+    async def upsert(self, record: zeep.xsd.CompoundValue) -> zeep.xsd.CompoundValue:
         """Upsert a single record."""
-        return self.request("upsert", record=record)
+        return await self.request("upsert", record=record)
 
     @WebServiceCall(
         "body.searchResult",
         extract=lambda resp: resp["recordList"]["record"],
     )
-    def search(
+    async def search(
         self, record: zeep.xsd.CompoundValue
     ) -> List[zeep.xsd.CompoundValue]:
         """Search records"""
-        return self.request("search", searchRecord=record)
+        return await self.request("search", searchRecord=record)
 
     @WebServiceCall(
         "body.writeResponseList",
         extract=lambda resp: [record["baseRef"] for record in resp],
     )
-    def upsertList(
+    async def upsertList(
         self, records: List[zeep.xsd.CompoundValue]
     ) -> List[zeep.xsd.CompoundValue]:
         """Upsert a list of records."""
-        return self.request("upsertList", record=records)
+        return await self.request("upsertList", record=records)
 
     @WebServiceCall(
         "body.getItemAvailabilityResult",
         extract=lambda resp: resp["itemAvailabilityList"]["itemAvailability"],
         default=[],
     )
-    def getItemAvailability(
+    async def getItemAvailability(
         self,
         *,
         internalIds: Optional[Sequence[int]] = None,
@@ -545,7 +525,7 @@ class NetSuiteSoapApi:
             for externalId in externalIds
         ]
 
-        return self.request(
+        return await self.request(
             "getItemAvailability",
             itemAvailabilityFilter=[
                 {

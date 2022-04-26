@@ -7,7 +7,7 @@ from .util import cached_property
 
 logger = logging.getLogger(__name__)
 
-__all__ = ("NetSuiteRestApi",)
+__all__ = ("AsyncNetSuiteRestApi",)
 
 
 class NetSuiteRestApi(rest_api_base.RestApiBase):
@@ -28,27 +28,27 @@ class NetSuiteRestApi(rest_api_base.RestApiBase):
     def hostname(self) -> str:
         return self._make_hostname()
 
-    def get(self, subpath: str, **request_kw):
-        return self._request("GET", subpath, **request_kw)
+    async def get(self, subpath: str, **request_kw):
+        return await self._request("GET", subpath, **request_kw)
 
-    def post(self, subpath: str, **request_kw):
-        return self._request(
+    async def post(self, subpath: str, **request_kw):
+        return await self._request(
             "POST",
             subpath,
             **request_kw,
         )
 
-    def put(self, subpath: str, **request_kw):
-        return self._request("PUT", subpath, **request_kw)
+    async def put(self, subpath: str, **request_kw):
+        return await self._request("PUT", subpath, **request_kw)
 
-    def patch(self, subpath: str, **request_kw):
-        return self._request("PATCH", subpath, **request_kw)
+    async def patch(self, subpath: str, **request_kw):
+        return await self._request("PATCH", subpath, **request_kw)
 
-    def delete(self, subpath: str, **request_kw):
-        return self._request("DELETE", subpath, **request_kw)
+    async def delete(self, subpath: str, **request_kw):
+        return await self._request("DELETE", subpath, **request_kw)
 
-    def suiteql(self, q: str, limit: int = 10, offset: int = 0, **request_kw):
-        return self._request(
+    async def suiteql(self, q: str, limit: int = 10, offset: int = 0, **request_kw):
+        return await self._request(
             "POST",
             "/query/v1/suiteql",
             headers={"Prefer": "transient", **request_kw.pop("headers", {})},
@@ -57,19 +57,19 @@ class NetSuiteRestApi(rest_api_base.RestApiBase):
             **request_kw,
         )
 
-    def jsonschema(self, record_type: str, **request_kw):
+    async def jsonschema(self, record_type: str, **request_kw):
         headers = {
             "Accept": "application/schema+json",
             **request_kw.pop("headers", {}),
         }
-        return self._request(
+        return await self._request(
             "GET",
             f"/record/v1/metadata-catalog/{record_type}",
             headers=headers,
             **request_kw,
         )
 
-    def openapi(self, record_types: Sequence[str] = (), **request_kw):
+    async def openapi(self, record_types: Sequence[str] = (), **request_kw):
         headers = {
             "Accept": "application/swagger+json",
             **request_kw.pop("headers", {}),
@@ -79,7 +79,7 @@ class NetSuiteRestApi(rest_api_base.RestApiBase):
         if len(record_types) > 0:
             params["select"] = ",".join(record_types)
 
-        return self._request(
+        return await self._request(
             "GET",
             "/record/v1/metadata-catalog",
             headers=headers,

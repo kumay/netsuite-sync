@@ -21,10 +21,10 @@ def add_parser(parser, subparser):
 
 
 def _add_restlet_get_parser(parser, subparser):
-    def restlet_get(config, args) -> str:
+    async def restlet_get(config, args) -> str:
         restlet = _get_restlet_or_error(parser, config)
 
-        resp = restlet.get(script_id=args.script_id, deploy=args.deploy)
+        resp = await restlet.get(script_id=args.script_id, deploy=args.deploy)
         return json.dumps(resp)
 
     p = subparser.add_parser(
@@ -43,7 +43,7 @@ def _add_restlet_post_parser(parser, subparser):
 
         payload = json.loads(payload_str)
 
-        resp = restlet.post(
+        resp = await restlet.post(
             script_id=args.script_id, deploy=args.deploy, json=payload
         )
         return json.dumps(resp)
@@ -65,7 +65,7 @@ def _add_restlet_put_parser(parser, subparser):
 
         payload = json.loads(payload_str)
 
-        resp = restlet.put(
+        resp = await restlet.put(
             script_id=args.script_id, deploy=args.deploy, json=payload
         )
         return json.dumps(resp)
@@ -82,7 +82,7 @@ def _add_restlet_delete_parser(parser, subparser):
     async def restlet_delete(config, args) -> str:
         restlet = _get_restlet_or_error(parser, config)
 
-        resp = restlet.put(script_id=args.script_id, deploy=args.deploy)
+        resp = await restlet.put(script_id=args.script_id, deploy=args.deploy)
         return json.dumps(resp)
 
     p = subparser.add_parser(

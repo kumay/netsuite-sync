@@ -18,9 +18,9 @@ def add_parser(parser, subparser):
 
 
 def _add_get_list_parser(parser, subparser):
-    def getList(config, args) -> str:
+    async def getList(config, args) -> str:
         soap_api = _get_soap_api_or_error(parser, config)
-        resp = soap_api.getList(
+        resp = await soap_api.getList(
             args.record_type, externalIds=args.externalId, internalIds=args.internalId
         )
         return _dump_response(resp)
@@ -43,9 +43,9 @@ def _add_get_list_parser(parser, subparser):
 
 
 def _add_get_parser(parser, subparser):
-    def get(config, args) -> str:
+    async def get(config, args) -> str:
         soap_api = _get_soap_api_or_error(parser, config)
-        resp = soap_api.get(
+        resp = await soap_api.get(
             args.record_type, externalId=args.externalId, internalId=args.internalId
         )
         return _dump_response(resp)
