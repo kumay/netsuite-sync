@@ -4,7 +4,7 @@ All credit gose to the original creater **jacobsvante**.
 https://codecov.io/gh/jacobsvante/netsuite
 
 
-## Reason to Falk instead of freating PR.
+## Reason to Fork instead of freating PR.
 
 I needed sync method instead of async.
 Needed to implement some feature for SOAP client Eg: creating SalesOrder.
