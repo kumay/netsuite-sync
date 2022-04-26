@@ -368,14 +368,6 @@ class NetSuiteSoapApi:
         #           for details.
         #
         with self:
-            # print("passwport")
-            # print(self.generate_passport())
-            # print(*args)
-            # import inspect
-            # print("svc")
-            # print(inspect.getargspec(svc))
-            # from lxml.etree import tostring
-            # print(tostring(self.client.create_message(self.client.service, 'add', *args, **kw)))
             return svc(*args, _soapheaders=self.generate_passport(), **kw)
 
     @WebServiceCall(
